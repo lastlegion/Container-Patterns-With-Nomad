@@ -26,7 +26,7 @@ job "ssl-proxy-example" {
       }
     }
 
-    task "ssl-proxy"{
+    task "ssl-proxy-sidecar"{
       driver = "docker"
       config {
         image = "nginx"
