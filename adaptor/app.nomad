@@ -37,7 +37,7 @@ job "nginx" {
       }
     }
     task "adaptor-nginx-exporter" {
-	    driver = "docker"
+      driver = "docker"
       config {
         image = "nginx/nginx-prometheus-exporter:0.8.0"
         args = [
