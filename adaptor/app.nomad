@@ -37,22 +37,22 @@ job "nginx" {
       }
     }
     task "adaptor-nginx-exporter" {
-			driver = "docker"
-			config {
-				image = "nginx/nginx-prometheus-exporter:0.8.0"
-				args = [
-					"--nginx.scrape-uri", "http://${NOMAD_ADDR_service_nginx_http}/status"
-				]
-				port_map {
-					http = 9113
-				}
-			}
-			resources{
-				network {
-					mbits = 10
-					port "http" {}
-				}
-			}
-  	}
-	}
+	    driver = "docker"
+      config {
+        image = "nginx/nginx-prometheus-exporter:0.8.0"
+        args = [
+          "--nginx.scrape-uri", "http://${NOMAD_ADDR_service_nginx_http}/status"
+        ]
+        port_map {
+          http = 9113
+        }
+      }
+      resources{
+        network {
+          mbits = 10
+          port "http" {}
+        }
+      }
+    }
+  }
 }
