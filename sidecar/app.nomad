@@ -72,7 +72,7 @@ job "ssl-proxy-example" {
         destination = "config/nginx.conf"
       }
       template {
-        # Warning: Fetch certificate from a secret store like vault for prod
+        # Warning: Fetch certificate from a secret store like vault in a production setting
         data = <<EOF
 -----BEGIN CERTIFICATE-----
 MIIDajCCAlKgAwIBAgITPAgZrdQO2jRhM/KkR8Czc1iC+jANBgkqhkiG9w0BAQsF
@@ -99,7 +99,7 @@ vAIDwNat6MpbCNH6pSs=
         destination = "secrets/certificate.crt"
       }
       template {
-        # Warning: Fetch certificate from a secret store like vault for prod.
+        # Warning: Fetch certificate from a secret store like vault in a production setting
         data = <<EOF
 -----BEGIN PRIVATE KEY-----
 MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDtReLnMCGfM6jI
