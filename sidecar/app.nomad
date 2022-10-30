@@ -11,20 +11,31 @@ job "ssl-proxy-example" {
         }
     }
 
+    service {
+      name = "app-server"
+      port = "http"
+
+      check {
+        type     = "http"
+        port     = "http"
+        path     = "/"
+        interval = "2s"
+        timeout  = "2s"
+      }
+    }
+
     task "app-server" {
       driver = "docker"
 
       config {
         image = "hashicorp/http-echo:latest"
+        ports = [
+          "http",
+        ]
         args  = [
-          "-listen", ":8080",
+          "-listen", ":${NOMAD_PORT_http}",
           "-text", "Hello World!",
         ]
-      }
-      
-      service {
-        name = "app-server"
-        port = "http"
       }
     }
 
@@ -44,33 +55,33 @@ job "ssl-proxy-example" {
       
       template {
         data = <<EOF
-          worker_processes  1;
-          events {
-              worker_connections  1024;
-          }
-          http {
-              include       mime.types;
-              default_type  application/octet-stream;
-              sendfile        on;
-              keepalive_timeout  65;
-              upstream backend {
-                {{ range service "app-server" }}
-                server {{ .Address }}:{{ .Port }};
-                {{ else }}server 127.0.0.1:65535; # force a 502
-                {{ end }}
-              }
-              server {
-                listen       443 ssl;
-                server_name  localhost;
-                ssl_certificate      /secrets/certificate.crt;
-                ssl_certificate_key  /secrets/certificate.key;
-                location / {
-                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-                  proxy_set_header Host $http_host;
-                  proxy_pass http://backend;
-                }
-              }
-          }
+worker_processes  1;
+events {
+    worker_connections  1024;
+}
+http {
+    include       mime.types;
+    default_type  application/octet-stream;
+    sendfile        on;
+    keepalive_timeout  65;
+    upstream backend {
+      {{ range service "app-server" }}
+      server {{ .Address }}:{{ .Port }};
+      {{ else }}server 127.0.0.1:65535; # force a 502
+      {{ end }}
+    }
+    server {
+      listen       443 ssl;
+      server_name  localhost;
+      ssl_certificate      /secrets/certificate.crt;
+      ssl_certificate_key  /secrets/certificate.key;
+      location / {
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header Host $http_host;
+        proxy_pass http://backend;
+      }
+    }
+}
         EOF
         destination = "config/nginx.conf"
       }
