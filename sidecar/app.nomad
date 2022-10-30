@@ -32,9 +32,9 @@ job "ssl-proxy-example" {
       driver = "docker"
       config {
         image = "nginx"
-        port_map {
-          https = 443
-        }
+        ports = [
+          "https",
+        ]
         volumes = [
           "config/nginx.conf:/etc/nginx/nginx.conf",
           "secrets/certificate.crt:/secrets/certificate.crt",
