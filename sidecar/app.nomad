@@ -53,6 +53,12 @@ job "ssl-proxy-example" {
               default_type  application/octet-stream;
               sendfile        on;
               keepalive_timeout  65;
+              upstream backend {
+                {{ range service "app-server" }}
+                server {{ .Address }}:{{ .Port }};
+                {{ else }}server 127.0.0.1:65535; # force a 502
+                {{ end }}
+              }
               server {
                 listen       443 ssl;
                 server_name  localhost;
@@ -61,7 +67,7 @@ job "ssl-proxy-example" {
                 location / {
                   proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
                   proxy_set_header Host $http_host;
-                  proxy_pass http://{{ env "NOMAD_ADDR_app_server_http" }};
+                  proxy_pass http://backend;
                 }
               }
           }
