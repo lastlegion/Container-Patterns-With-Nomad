@@ -1,6 +1,16 @@
 job "ssl-proxy-example" {
   datacenters=["dc1"]
   group "ssl-proxy" {
+        
+    network {
+        port "http" {
+            static = 8080
+        }
+        port "https" {
+            static = 443
+        }
+    }
+
     task "app-server" {
       driver = "docker"
 
@@ -11,15 +21,7 @@ job "ssl-proxy-example" {
           "-text", "Hello World!",
         ]
       }
-
-      resources {
-        network {
-          mbits = 10
-          port "http" {
-            static = 8080
-          }
-        }
-      }
+      
       service {
         name = "app-server"
         port = "http"
@@ -39,12 +41,7 @@ job "ssl-proxy-example" {
           "secrets/certificate.key:/secrets/certificate.key",
         ]
       }
-      resources {
-        network {
-          mbits = 10
-          port "https" {}
-        }
-      }
+      
       template {
         data = <<EOF
           worker_processes  1;
