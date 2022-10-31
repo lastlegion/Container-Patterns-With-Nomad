@@ -1,28 +1,41 @@
 job "ssl-proxy-example" {
   datacenters=["dc1"]
   group "ssl-proxy" {
+        
+    network {
+        port "http" {
+            static = 8080
+        }
+        port "https" {
+            static = 443
+        }
+    }
+
+    service {
+      name = "app-server"
+      port = "http"
+
+      check {
+        type     = "http"
+        port     = "http"
+        path     = "/"
+        interval = "2s"
+        timeout  = "2s"
+      }
+    }
+
     task "app-server" {
       driver = "docker"
 
       config {
         image = "hashicorp/http-echo:latest"
+        ports = [
+          "http",
+        ]
         args  = [
-          "-listen", ":8080",
+          "-listen", ":${NOMAD_PORT_http}",
           "-text", "Hello World!",
         ]
-      }
-
-      resources {
-        network {
-          mbits = 10
-          port "http" {
-            static = 8080
-          }
-        }
-      }
-      service {
-        name = "app-server"
-        port = "http"
       }
     }
 
@@ -30,44 +43,45 @@ job "ssl-proxy-example" {
       driver = "docker"
       config {
         image = "nginx"
-        port_map {
-          https = 443
-        }
+        ports = [
+          "https",
+        ]
         volumes = [
           "config/nginx.conf:/etc/nginx/nginx.conf",
           "secrets/certificate.crt:/secrets/certificate.crt",
           "secrets/certificate.key:/secrets/certificate.key",
         ]
       }
-      resources {
-        network {
-          mbits = 10
-          port "https" {}
-        }
-      }
+      
       template {
         data = <<EOF
-          worker_processes  1;
-          events {
-              worker_connections  1024;
-          }
-          http {
-              include       mime.types;
-              default_type  application/octet-stream;
-              sendfile        on;
-              keepalive_timeout  65;
-              server {
-                listen       443 ssl;
-                server_name  localhost;
-                ssl_certificate      /secrets/certificate.crt;
-                ssl_certificate_key  /secrets/certificate.key;
-                location / {
-                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-                  proxy_set_header Host $http_host;
-                  proxy_pass http://{{ env "NOMAD_ADDR_app_server_http" }};
-                }
-              }
-          }
+worker_processes  1;
+events {
+    worker_connections  1024;
+}
+http {
+    include       mime.types;
+    default_type  application/octet-stream;
+    sendfile        on;
+    keepalive_timeout  65;
+    upstream backend {
+      {{ range service "app-server" }}
+      server {{ .Address }}:{{ .Port }};
+      {{ else }}server 127.0.0.1:65535; # force a 502
+      {{ end }}
+    }
+    server {
+      listen       443 ssl;
+      server_name  localhost;
+      ssl_certificate      /secrets/certificate.crt;
+      ssl_certificate_key  /secrets/certificate.key;
+      location / {
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header Host $http_host;
+        proxy_pass http://backend;
+      }
+    }
+}
         EOF
         destination = "config/nginx.conf"
       }
